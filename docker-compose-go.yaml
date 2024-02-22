@@ -1,0 +1,386 @@
+version: '2.0'
+
+volumes:
+  orderer.qq.com:
+
+networks:
+  fabric_network:
+    name: fabric_network
+
+services:
+  # ??????
+  orderer.qq.com:
+    container_name: orderer.qq.com
+    image: hyperledger/fabric-orderer:2.4.1
+    extra_hosts:
+      - "orderer.qq.com:192.168.208.129"
+      - "peer0.taobao.com:192.168.208.129"
+      - "peer1.taobao.com:192.168.208.129"
+      - "peer0.jd.com:192.168.208.129"
+      - "peer1.jd.com:192.168.208.129"
+    environment:
+      - FABRIC_LOGGING_FORMAT=%{color}[%{id:03x} %{time:01-02 00:00:00.00 MST}] [%{module}] %{shortfunc} -> %{level:.4s}%{color:reset} %{message}
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=7050
+      - ORDERER_GENERAL_GENESISMETHOD=file
+      - ORDERER_GENERAL_BOOTSTRAPFILE=/etc/hyperledger/config/genesis.block # ??????
+      - ORDERER_GENERAL_LOCALMSPID=QQMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/etc/hyperledger/orderer/msp # ????
+      - ORDERER_GENERAL_LEDGERTYPE=file
+      - ORDERER_OPERATIONS_LISTENADDRESS=0.0.0.0:8443
+      - ORDERER_METRICS_PROVIDER=prometheus
+      # default: false
+      - ORDERER_GENERAL_TLS_ENABLED=true 
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/etc/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/etc/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/etc/hyperledger/orderer/tls/ca.crt]
+      - FABRIC_LOGGING_SPEC=DEBUG
+      # - GODEBUG=netdns=go
+    command: orderer start
+    ports:
+      - "7050:7050"
+      - "8443:8443"
+    volumes: # ???cryptogen?configtxgen?????????????
+      - ./config/genesis.block:/etc/hyperledger/config/genesis.block
+      - ./crypto-config/ordererOrganizations/qq.com/orderers/orderer.qq.com/:/etc/hyperledger/orderer
+    #      - orderer.qq.com:/var/hyperledger/production/orderer
+    networks:
+      - fabric_network
+
+  #  Taobao ?? peer0 ??
+  peer0.taobao.com:
+    extends:
+      file: docker-compose-base.yaml
+      service: peer-base
+    container_name: peer0.taobao.com
+    environment:
+      - CORE_PEER_ID=peer0.taobao.com
+      - CORE_PEER_LOCALMSPID=TaobaoMSP
+      - CORE_PEER_ADDRESS=peer0.taobao.com:7051
+      - CORE_OPERATIONS_LISTENADDRESS=0.0.0.0:9443
+      - CORE_PEER_ADDRESSAUTODETECT=false
+      - CORE_PEER_GOSSIP_USELEADERELECTION=true
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      #- CORE_PEER_CHAINCODEADDRESS=peer0.taobao.com:7053
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.taobao.com:7051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.taobao.com:7051
+      - CORE_PEER_GOSSIP_ORGLEADER=false  # whether this node is the org leader, default to false
+      - CORE_METRICS_PROVIDER=prometheus  # prometheus will pull metrics from fabric via /metrics RESTful API
+      - CORE_PEER_PROFILE_ENABLED=false
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/peer/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/peer/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/peer/tls/ca.crt
+      - FABRIC_LOGGING_SPEC=DEBUG # info:core.chaincode=debug
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB # 状态数据库的存储引擎（or CouchDB）
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=peer0.taobao.couchdb:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    ports:
+      - "7051:7051" # grpc????
+      - "7052:7052"
+      - "9443:9443"
+      - "7053:7053" # eventhub??
+    volumes:
+      - ./crypto-config/peerOrganizations/taobao.com/peers/peer0.taobao.com:/etc/hyperledger/peer
+    #      - peer0.taobao.com:/var/hyperledger/production
+    depends_on:
+      - orderer.qq.com
+      - peer0.taobao.couchdb
+      
+  #  Taobao ?? peer1 ??
+  peer1.taobao.com:
+    extends:
+      file: docker-compose-base.yaml
+      service: peer-base
+    container_name: peer1.taobao.com
+    environment:
+      - CORE_PEER_ID=peer1.taobao.com
+      - CORE_PEER_LOCALMSPID=TaobaoMSP
+      - CORE_PEER_ADDRESS=peer1.taobao.com:8051
+      - CORE_PEER_ADDRESSAUTODETECT=false
+      - CORE_PEER_GOSSIP_USELEADERELECTION=true
+      - CORE_OPERATIONS_LISTENADDRESS=0.0.0.0:9444
+      - CORE_PEER_GOSSIP_ORGLEADER=false  # whether this node is the org leader, default to false
+      #      - CORE_OPERATIONS_LISTENADDRESS=0.0.0.0:9443  # operation RESTful API
+      - CORE_METRICS_PROVIDER=prometheus  # prometheus will pull metrics from fabric via /metrics RESTful API
+      - CORE_PEER_PROFILE_ENABLED=false
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/peer/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/peer/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/peer/tls/ca.crt
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      #- CORE_PEER_CHAINCODEADDRESS=peer1.taobao.com:8053
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.taobao.com:8051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.taobao.com:8051
+      - FABRIC_LOGGING_SPEC=DEBUG # info:core.chaincode=debug
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB # 状态数据库的存储引擎（or CouchDB）
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=peer1.taobao.couchdb:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    ports:
+      - "8051:7051"
+      - "8052:7052"
+      - "8053:7053"
+      - "9444:9443"
+    volumes:
+      - ./crypto-config/peerOrganizations/taobao.com/peers/peer1.taobao.com:/etc/hyperledger/peer
+    #      - peer1.taobao.com:/var/hyperledger/production
+    depends_on:
+      - orderer.qq.com
+      - peer1.taobao.couchdb
+            
+  #  JD ?? peer0 ??
+  peer0.jd.com:
+    extends:
+      file: docker-compose-base.yaml
+      service: peer-base
+    container_name: peer0.jd.com
+    environment:
+      - CORE_PEER_ID=peer0.jd.com
+      - CORE_PEER_LOCALMSPID=JDMSP
+      - CORE_PEER_ADDRESS=peer0.jd.com:9051
+      - CORE_PEER_ADDRESSAUTODETECT=false
+      - CORE_PEER_GOSSIP_USELEADERELECTION=true
+      - CORE_PEER_GOSSIP_ORGLEADER=false  # whether this node is the org leader, default to false
+      - CORE_OPERATIONS_LISTENADDRESS=0.0.0.0:9445  # operation RESTful API
+      - CORE_METRICS_PROVIDER=prometheus  # prometheus will pull metrics from fabric via /metrics RESTful API
+      - CORE_PEER_PROFILE_ENABLED=false
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/peer/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/peer/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/peer/tls/ca.crt
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      #- CORE_PEER_CHAINCODEADDRESS=peer0.jd.com:9053
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.jd.com:9051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.jd.com:9051
+      - FABRIC_LOGGING_SPEC=DEBUG # info:core.chaincode=debug
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB # 状态数据库的存储引擎（or CouchDB）
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=peer0.jd.couchdb:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    ports:
+      - "9051:7051"
+      - "9052:7052"
+      - "9053:7053"
+      - "9445:9443"
+    volumes:
+      - ./crypto-config/peerOrganizations/jd.com/peers/peer0.jd.com:/etc/hyperledger/peer
+    #      - peer0.jd.com:/var/hyperledger/production
+    depends_on:
+      - orderer.qq.com
+      - peer0.jd.couchdb
+
+  #  JD ?? peer1 ??
+  peer1.jd.com:
+    extends:
+      file: docker-compose-base.yaml
+      service: peer-base
+    container_name: peer1.jd.com
+    environment:
+      - CORE_PEER_ID=peer1.jd.com
+      - CORE_PEER_LOCALMSPID=JDMSP
+      - CORE_PEER_ADDRESS=peer1.jd.com:10051
+      - CORE_PEER_ADDRESSAUTODETECT=false
+      - CORE_PEER_GOSSIP_USELEADERELECTION=true
+      - CORE_PEER_GOSSIP_ORGLEADER=false  # whether this node is the org leader, default to false
+      - CORE_OPERATIONS_LISTENADDRESS=0.0.0.0:9446  # operation RESTful API
+      - CORE_METRICS_PROVIDER=prometheus  # prometheus will pull metrics from fabric via /metrics RESTful API
+      - CORE_PEER_PROFILE_ENABLED=false
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/peer/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/peer/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/peer/tls/ca.crt
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      #- CORE_PEER_CHAINCODEADDRESS=peer1.jd.com:10053
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.jd.com:10051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.jd.com:10051
+      - FABRIC_LOGGING_SPEC=DEBUG # info:core.chaincode=debug
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB # 状态数据库的存储引擎（or CouchDB）
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=peer1.jd.couchdb:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    ports:
+      - "10051:7051"
+      - "10053:7053"
+      - "10052:7052"
+      - "9446:9443"
+    volumes:
+      - ./crypto-config/peerOrganizations/jd.com/peers/peer1.jd.com:/etc/hyperledger/peer
+    #      - peer1.jd.com:/var/hyperledger/production
+    depends_on:
+      - orderer.qq.com
+      - peer1.jd.couchdb
+      
+  ca-tls:
+    container_name: ca-tls
+    image: hyperledger/fabric-ca:1.4.7
+    environment:
+      - FABRIC_CA_SERVER_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_TLS_ENABLED=true
+      - FABRIC_CA_SERVER_CSR_CN=ca-tls
+      # - FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server/ca.qq.com-cert.pem
+      # - FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server/priv_sk
+      #- FABRIC_CA_SERVER_CSR_HOSTS=0.0.0.0
+      - FABRIC_CA_SERVER_DEBUG=true
+      - FABRIC_CA_SERVER_PORT=7054
+      - FABRIC_CA_SERVER_DB_TYPE=mysql
+      - FABRIC_CA_SERVER_DB_DATASOURCE=root:123456@tcp(192.168.208.129:3306)/fabric_ca_tls?parseTime=true
+    volumes:
+      - ./crypto-config/ordererOrganizations/qq.com:/etc/hyperledger/fabric-ca-server
+    # command: sh -c 'fabric-ca-server start --ca.certfile /etc/hyperledger/fabric-ca-server/ca.qq.com-cert.pem --ca.keyfile /etc/hyperledger/fabric-ca-server/priv_sk -d -b tls-ca-admin:tls-ca-adminpw --port 7054'
+    command: sh -c 'fabric-ca-server start -b tls-ca-admin:tls-ca-adminpw -d'
+    networks:
+      - fabric_network
+    ports:
+      - "7054:7054"
+      
+  ca-taobao:
+    image: hyperledger/fabric-ca:1.4.7
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=ca-taobao
+      #- FABRIC_CA_SERVER_TLS_ENABLED=true
+      #- FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server/ca/ca.taobao.com-cert.pem
+      #- FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server/ca/priv_sk
+      #- FABRIC_CA_SERVER_CSR_HOSTS=0.0.0.0
+      - FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server/ca/ca.taobao.com-cert.pem
+      - FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server/ca/priv_sk
+      - FABRIC_CA_SERVER_DEBUG=true
+      - FABRIC_CA_SERVER_PORT=8054
+      - FABRIC_CA_SERVER_DB_TYPE=mysql
+      - FABRIC_CA_SERVER_DB_DATASOURCE=root:123456@tcp(192.168.208.129:3306)/fabric_ca_tb?parseTime=true
+    ports:
+      - "8054:8054"
+    #command: sh -c 'fabric-ca-server start --ca.certfile /etc/hyperledger/fabric-ca-server/ca/ca.taobao.com-cert.pem --ca.keyfile /etc/hyperledger/fabric-ca-server/ca/priv_sk -b tb-ca-admin:tb-ca-adminpw -d --port 8054'
+    command: sh -c 'fabric-ca-server start -b tb-ca-admin:tb-ca-adminpw -d'
+    volumes:
+      - ./crypto-config/peerOrganizations/taobao.com:/etc/hyperledger/fabric-ca-server
+    container_name: ca-taobao
+    networks:
+      - fabric_network
+      
+  ca-jd:
+    image: hyperledger/fabric-ca:1.4.7
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=ca-jd
+      #- FABRIC_CA_SERVER_TLS_ENABLED=true
+      #- FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server/ca/ca.jd.com-cert.pem
+      #- FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server/ca/priv_sk
+      #- FABRIC_CA_SERVER_CSR_HOSTS=0.0.0.0
+      - FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server/ca/ca.jd.com-cert.pem
+      - FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server/ca/priv_sk
+      - FABRIC_CA_SERVER_DEBUG=true
+      - FABRIC_CA_SERVER_PORT=9054
+      - FABRIC_CA_SERVER_DB_TYPE=mysql
+      - FABRIC_CA_SERVER_DB_DATASOURCE=root:123456@tcp(192.168.208.129:3306)/fabric_ca_jd?parseTime=true
+    ports:
+      - "9054:9054"
+    #command: sh -c 'fabric-ca-server start --ca.certfile /etc/hyperledger/fabric-ca-server/ca/ca.jd.com-cert.pem --ca.keyfile /etc/hyperledger/fabric-ca-server/ca/priv_sk -b jd-ca-admin:jd-ca-adminpw -d --port 9054'
+    command: sh -c 'fabric-ca-server start -b jd-ca-admin:jd-ca-adminpw -d'
+    volumes:
+      - ./crypto-config/peerOrganizations/jd.com:/etc/hyperledger/fabric-ca-server
+    container_name: ca-jd
+    networks:
+      - fabric_network
+
+  peer0.taobao.couchdb:
+    container_name: peer0.taobao.couchdb
+    image: couchdb:3.1.1
+    # Populate the COUCHDB_USER and COUCHDB_PASSWORD to set an admin user and password
+    # for CouchDB.  This will prevent CouchDB from operating in an "Admin Party" mode.
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    # Comment/Uncomment the port mapping if you want to hide/expose the CouchDB service,
+    # for example map it to utilize Fauxton User Interface in dev environments.
+    ports:
+      - "5984:5984"
+    networks:
+      - fabric_network
+  peer1.taobao.couchdb:
+    container_name: peer1.taobao.couchdb
+    image: couchdb:3.1.1
+    # Populate the COUCHDB_USER and COUCHDB_PASSWORD to set an admin user and password
+    # for CouchDB.  This will prevent CouchDB from operating in an "Admin Party" mode.
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    # Comment/Uncomment the port mapping if you want to hide/expose the CouchDB service,
+    # for example map it to utilize Fauxton User Interface in dev environments.
+    ports:
+      - "6984:5984"
+    networks:
+      - fabric_network
+  peer0.jd.couchdb:
+    container_name: peer0.jd.couchdb
+    image: couchdb:3.1.1
+    # Populate the COUCHDB_USER and COUCHDB_PASSWORD to set an admin user and password
+    # for CouchDB.  This will prevent CouchDB from operating in an "Admin Party" mode.
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    # Comment/Uncomment the port mapping if you want to hide/expose the CouchDB service,
+    # for example map it to utilize Fauxton User Interface in dev environments.
+    ports:
+      - "7984:5984"
+    networks:
+      - fabric_network
+     
+  peer1.jd.couchdb:
+    container_name: peer1.jd.couchdb
+    image: couchdb:3.1.1
+    # Populate the COUCHDB_USER and COUCHDB_PASSWORD to set an admin user and password
+    # for CouchDB.  This will prevent CouchDB from operating in an "Admin Party" mode.
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    # Comment/Uncomment the port mapping if you want to hide/expose the CouchDB service,
+    # for example map it to utilize Fauxton User Interface in dev environments.
+    ports:
+      - "8984:5984"
+    networks:
+      - fabric_network
+  # ?????
+  cli:
+    container_name: cli
+    image: hyperledger/fabric-tools:2.4.1
+    tty: true
+    extra_hosts:
+      - "orderer.qq.com:192.168.208.129"
+      - "peer0.taobao.com:192.168.208.129"
+      - "peer1.taobao.com:192.168.208.129"
+      - "peer0.jd.com:192.168.208.129"
+      - "peer1.jd.com:192.168.208.129"
+    environment:
+      - CORE_PEER_ID=cli
+      - FABRIC_LOGGING_SPEC=DEBUG
+      - FABRIC_LOGGING_FORMAT=%{color}[%{id:03x} %{time:01-02 00:00:00.00 MST}] [%{module}] %{shortfunc} -> %{level:.4s}%{color:reset} %{message}
+      - GO111MODULE=auto
+      - GOPROXY=https://goproxy.cn,direct
+      - CORE_PEER_ADDRESS=peer0.taobao.com:7051
+      - CORE_PEER_LOCALMSPID=TaobaoMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/peer/taobao.com/peers/peer0.taobao.com/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/peer/taobao.com/peers/peer0.taobao.com/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/peer/taobao.com/peers/peer0.taobao.com/tls/ca.crt
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/peer/taobao.com/users/Admin@taobao.com/msp
+      - ORDERER_CA=/etc/hyperledger/orderer/qq.com/orderers/orderer.qq.com/msp/tlscacerts/tlsca.qq.com-cert.pem
+    volumes:
+      - ./config:/etc/hyperledger/config/
+      - ./configtx.yaml:/etc/hyperledger/config/configtx.yaml
+      - ./crypto-config.yaml:/etc/hyperledger/config/crypto-config.yaml
+      - ./crypto-config/peerOrganizations/taobao.com/:/etc/hyperledger/peer/taobao.com
+      - ./crypto-config/peerOrganizations/jd.com/:/etc/hyperledger/peer/jd.com
+      - ./crypto-config/ordererOrganizations/qq.com/:/etc/hyperledger/orderer/qq.com
+      - ./../chaincode-go/:/go/src/chaincode # ??????
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric
+    networks:
+      - fabric_network
+    depends_on:
+      - orderer.qq.com
+      - peer0.taobao.com
+      - peer1.taobao.com
+      - peer0.jd.com
+      - peer1.jd.com

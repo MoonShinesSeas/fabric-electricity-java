@@ -1,0 +1,61 @@
+name: fabric_network
+version: 1.0.0
+client:
+  organization: Taobao
+  connection:
+    timeout:
+      peer:
+        endorser: '300'
+organizations:
+  Taobao:
+    mspid: TaobaoMSP
+    peers:
+      - peer0.taobao.com
+    certificateAuthorities:
+      - ca.taobao.com
+peers:
+  peer0.taobao.com:
+    url: grpcs://192.168.208.129:7051
+    tlsCACerts:
+      pem: |
+        -----BEGIN CERTIFICATE-----
+        MIICKDCCAc6gAwIBAgIUY5n7nMzzCl1SvtQh5tNnkm9l41gwCgYIKoZIzj0EAwIw
+        aDELMAkGA1UEBhMCVVMxFzAVBgNVBAgTDk5vcnRoIENhcm9saW5hMRQwEgYDVQQK
+        EwtIeXBlcmxlZGdlcjEPMA0GA1UECxMGRmFicmljMRkwFwYDVQQDExBmYWJyaWMt
+        Y2Etc2VydmVyMB4XDTI0MDEyODE0MjYwMFoXDTM5MDEyNDE0MjYwMFowaDELMAkG
+        A1UEBhMCVVMxFzAVBgNVBAgTDk5vcnRoIENhcm9saW5hMRQwEgYDVQQKEwtIeXBl
+        cmxlZGdlcjEPMA0GA1UECxMGRmFicmljMRkwFwYDVQQDExBmYWJyaWMtY2Etc2Vy
+        dmVyMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExkUr6raKXTEyTeHls1GBmVWv
+        35wvZUK3yvCRt94BZooRs5S+QEHpaXrpW63gOQ92hoZN+o/eHuUfMYp6IyMgdKNW
+        MFQwDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYBAf8CAQEwHQYDVR0OBBYE
+        FBhEdrevi6I6WgVtoM0nd7ZkOz4NMA8GA1UdEQQIMAaHBAAAAAAwCgYIKoZIzj0E
+        AwIDSAAwRQIhAKfl1wZG7wN2XOuZ3Yf4e1K9iOSFN2s1OmyjGdvfvk3gAiA1PDJy
+        ZZgVCmgjTzhBOQ/5gQXu88JyRuUPXtd6rpkcNQ==
+        -----END CERTIFICATE-----
+    grpcOptions:
+      ssl-target-name-override: peer0.taobao.com
+      hostnameOverride: peer0.taobao.com
+certificateAuthorities:
+  ca.taobao.com:
+    url: https://192.168.208.129:8054
+    caName: ca-taobao
+    tlsCACerts:
+      pem: 
+        - |
+          -----BEGIN CERTIFICATE-----
+          MIICOjCCAd+gAwIBAgIQWjbOX338eXWlz2sfde3jZTAKBggqhkjOPQQDAjBnMQsw
+          CQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNU2FuIEZy
+          YW5jaXNjbzETMBEGA1UEChMKdGFvYmFvLmNvbTEWMBQGA1UEAxMNY2EudGFvYmFv
+          LmNvbTAeFw0yNDAxMjEwNTQwMDBaFw0zNDAxMTgwNTQwMDBaMGcxCzAJBgNVBAYT
+          AlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYDVQQHEw1TYW4gRnJhbmNpc2Nv
+          MRMwEQYDVQQKEwp0YW9iYW8uY29tMRYwFAYDVQQDEw1jYS50YW9iYW8uY29tMFkw
+          EwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE0Mdvbqe2tEVdLztVfaiIi/qhBhMTZ4G/
+          49NBC54mTvOGH/k6n8v4b0fZ6K9V0Ln7LXbeHC0g1+KPHXpEV51n8aNtMGswDgYD
+          VR0PAQH/BAQDAgGmMB0GA1UdJQQWMBQGCCsGAQUFBwMCBggrBgEFBQcDATAPBgNV
+          HRMBAf8EBTADAQH/MCkGA1UdDgQiBCDF6xbdkw7UN1Ce3H543H5RePvRN++Arw94
+          dYpv+ot4kjAKBggqhkjOPQQDAgNJADBGAiEAlyKFAabwutFD5dKlrAYDr0i2nBSl
+          sWg0FQRm0ShQGMECIQDxMRa5tWOr7eQhGzrHxQ9x+WApzOlcars4ZQDnXiFZ6g==
+          -----END CERTIFICATE-----
+
+  httpOptions:
+    verify: false

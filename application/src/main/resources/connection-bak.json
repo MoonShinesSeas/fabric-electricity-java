@@ -1,0 +1,100 @@
+
+{
+  "name": "fabric_network",
+  "version": "1.0.0",
+  "dependencies": {
+  },
+  "client": {
+    "organization": "Taobao",
+    "connection": {
+      "timeout": {
+        "peer": {
+          "endorser": "300"
+        },
+        "orderer": "300"
+      }
+    }
+  },
+  "channels": {
+    "appchannel": {
+      "orderers": [
+        "orderer.qq.com"
+      ],
+      "peers": {
+        "peer0.taobao.com": {
+          "endorsingPeer": true,
+          "chaincodeQuery": true,
+          "ledgerQuery": true,
+          "endorsement": true,
+          "eventSource": true
+        }
+      }
+    }
+  },
+  "organizations": {
+    "Taobao": {
+      "mspid": "TaobaoMSP",
+      "peers": [
+        "peer0.taobao.com"
+      ],
+      "certificateAuthorities": [
+        "ca-taobao"
+      ],
+      "adminPrivateKeyPEM": {
+        "path": "network/crypto-config/peerOrganizations/taobao.com/users/Admin@taobao.com/msp/keystore/priv_sk"
+      },
+      "signedCertPEM": {
+        "path": "network/crypto-config/peerOrganizations/taobao.com/users/Admin@taobao.com/msp/signcerts/Admin@taobao.com-cert.pem"
+      }
+    }
+  },
+  "orderers": {
+    "orderer.qq.com": {
+      "url": "grpcs://192.168.208.129:7050",
+      "mspid": "QQMSP",
+      "grpcOptions": {
+        "ssl-target-name-override": "orderer.qq.com",
+        "hostnameOverride": "orderer.qq.com"
+      },
+      "tlsCACerts": {
+        "path": "network/crypto-config/ordererOrganizations/qq.com/orderers/orderer.qq.com/tls/ca.crt"
+      },
+      "adminPrivateKeyPEM": {
+        "path": "network/crypto-config/ordererOrganizations/qq.com/users/Admin@qq.com/msp/keystore/priv_sk"
+      },
+      "signedCertPEM": {
+        "path": "network/crypto-config/ordererOrganizations/qq.com/users/Admin@qq.com/msp/signcerts/Admin@qq.com-cert.pem"
+      }
+    }
+  },
+  "peers": {
+    "peer0.taobao.com": {
+      "url": "grpcs://192.168.208.129:7051",
+      "grpcOptions": {
+        "ssl-target-name-override": "peer0.taobao.com",
+        "hostnameOverride": "peer0.taobao.com",
+        "request-timeout": 120001
+      },
+      "tlsCACerts": {
+        "path": "network/crypto-config/peerOrganizations/taobao.com/peers/peer0.taobao.com/tls/ca.crt"
+      }
+    }
+  },
+  "certificateAuthorities": {
+    "ca-taobao": {
+      "url": "http://192.168.208.129:8054",
+      "grpcOptions": {
+        "verify": true
+      },
+      "tlsCACerts": {
+        "path": "network/crypto-config/peerOrganizations/taobao.com/ca/ca.taobao.com-cert.pem"
+      },
+      "registrar": [
+        {
+          "enrollId": "tb-ca-admin",
+          "enrollSecret": "tb-ca-adminpw"
+        }
+      ]
+    }
+  }
+}
