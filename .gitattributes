@@ -1,1 +1,9 @@
 peer filter=lfs diff=lfs merge=lfs -text
+orderer filter=lfs diff=lfs merge=lfs -text
+configtxgen filter=lfs diff=lfs merge=lfs -text
+configtxlator filter=lfs diff=lfs merge=lfs -text
+cryptogen filter=lfs diff=lfs merge=lfs -text
+discover filter=lfs diff=lfs merge=lfs -text
+fabric-ca-client filter=lfs diff=lfs merge=lfs -text
+fabric-ca-server filter=lfs diff=lfs merge=lfs -text
+idemixgen filter=lfs diff=lfs merge=lfs -text
